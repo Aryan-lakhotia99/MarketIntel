@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useId, useCallback } from "react";
 
 type TradingViewLiveChartProps = {
   symbol: string;
@@ -9,11 +9,12 @@ type TradingViewLiveChartProps = {
 
 export default function TradingViewLiveChart({ symbol, currency = "INR" }: TradingViewLiveChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const containerId = useMemo(() => `tradingview-live-chart-${Math.random().toString(36).substring(2, 9)}`, []);
+  const id = useId();
+  const containerId = `tradingview-live-chart-${id.replace(/:/g, "")}`;
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
   // Map backend symbols to TradingView symbols
-  const getTVSymbol = (sym: string): string => {
+  const getTVSymbol = useCallback((sym: string): string => {
     const cleanSym = sym.toUpperCase().trim();
     
     // 1. Index mappings (Standardized yfinance symbols to TradingView symbols)
@@ -90,7 +91,7 @@ export default function TradingViewLiveChart({ symbol, currency = "INR" }: Tradi
 
     // Default to BSE for other Indian stocks to ensure widget loads successfully
     return `BSE:${cleanSym}`;
-  };
+  }, [currency]);
 
   // Effect 1: Handle script loading (run once on mount)
   useEffect(() => {
@@ -167,7 +168,7 @@ export default function TradingViewLiveChart({ symbol, currency = "INR" }: Tradi
 
     const timer = setTimeout(initializeWidget, 100);
     return () => clearTimeout(timer);
-  }, [symbol, scriptLoaded]);
+  }, [symbol, scriptLoaded, containerId, currency, getTVSymbol]);
 
   return (
     <div className="relative h-[480px] w-full overflow-hidden rounded-xl border border-white/5 bg-slate-950/40 backdrop-blur-md">

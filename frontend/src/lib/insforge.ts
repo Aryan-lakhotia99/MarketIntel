@@ -10,13 +10,22 @@ import { createClient, createAdminClient } from "@insforge/sdk";
 
 const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL!;
 const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!;
-const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY!;
+let adminClient: any = null;
 
-/** Admin client – bypasses RLS. Server-side only. */
-export const insforgeAdmin = createAdminClient({
-  baseUrl: INSFORGE_URL,
-  apiKey: INSFORGE_API_KEY,
-});
+/** Admin client – bypasses RLS. Server-side only. Loaded lazily. */
+export function getInsforgeAdmin() {
+  if (!adminClient) {
+    const apiKey = process.env.INSFORGE_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing INSFORGE_API_KEY environment variable.");
+    }
+    adminClient = createAdminClient({
+      baseUrl: INSFORGE_URL,
+      apiKey: apiKey,
+    });
+  }
+  return adminClient;
+}
 
 /** Anon client (no user session). */
 export const insforgeAnon = createClient({

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { insforge } from "@/lib/insforge/client";
 import { getCurrentInsforgeUser, logoutInsforge } from "@/app/actions/auth";
@@ -96,17 +96,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
-    const id = Math.random().toString(36).substring(2, 9);
+  const toastIdCounter = useRef(0);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "info") => {
+    toastIdCounter.current += 1;
+    const id = `toast-${toastIdCounter.current}`;
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       removeToast(id);
     }, 4000);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, [removeToast]);
 
   // Check auth state on mount — supports BOTH FastAPI JWT and InsForge OAuth sessions
   useEffect(() => {
@@ -165,7 +168,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sync Watchlist database data based on user login state
   // Uses Next.js Route Handlers backed by @insforge/sdk (real InsForge Postgres)
   // Token is the FastAPI JWT (cookie/localStorage) OR the InsForge access token (cookie)
-  const fetchWatchlists = async () => {
+  const createDefaultWatchlist = useCallback(async (token: string) => {
+    try {
+      const res = await fetch(WL_BASE, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: "Default" })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWatchlists([data]);
+        setActiveWatchlistId(data.id);
+      }
+    } catch (err) {
+      console.error("Failed to create default watchlist:", err);
+    }
+  }, []);
+
+  const fetchWatchlists = useCallback(async () => {
     // For InsForge OAuth users, the watchlist route handler reads the insforge_access_token cookie.
     // We pass it as Authorization header as well, but the Route Handler will prefer it.
     const fastapiToken = getCookie("token") || (typeof window !== "undefined" ? localStorage.getItem("token") : null);
@@ -193,27 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error("Failed to load user watchlists:", err);
     }
-  };
-
-  const createDefaultWatchlist = async (token: string) => {
-    try {
-      const res = await fetch(WL_BASE, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ name: "Default" })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setWatchlists([data]);
-        setActiveWatchlistId(data.id);
-      }
-    } catch (err) {
-      console.error("Failed to create default watchlist:", err);
-    }
-  };
+  }, [activeWatchlistId, createDefaultWatchlist]);
 
   useEffect(() => {
     if (user) {
@@ -222,7 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setWatchlists([]);
       setActiveWatchlistId(null);
     }
-  }, [user]);
+  }, [user, fetchWatchlists]);
 
   // Handle route protection
   useEffect(() => {

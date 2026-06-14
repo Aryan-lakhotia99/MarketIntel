@@ -8,7 +8,7 @@ import { requireAuth } from "@/lib/auth-server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { insforgeUserId, db } = await requireAuth(req);
+    const { db } = await requireAuth(req);
 
     const body = await req.json();
     const watchlistId = Number(body?.watchlistId);

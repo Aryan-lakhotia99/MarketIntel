@@ -154,7 +154,7 @@ export default function StockPage({ params }: StockPageProps) {
       delta = 1.5;
     }
     
-    let newScore = Math.max(5, Math.min(98, Math.round((momentum.score + shift) * 10) / 10));
+    const newScore = Math.max(5, Math.min(98, Math.round((momentum.score + shift) * 10) / 10));
     
     let label = "NEUTRAL";
     if (newScore >= 75) label = "STRONG BULLISH";
@@ -184,8 +184,8 @@ export default function StockPage({ params }: StockPageProps) {
       insight = "Extreme bearish momentum active; RSI oversold and high selling volume confirmed.";
     }
 
-    let rsi = momentum.rsi14 ? Math.max(10, Math.min(90, momentum.rsi14 + shift * 0.8)) : 50;
-    let volRatio = momentum.volumeRatio10_50 ? Math.max(0.2, momentum.volumeRatio10_50 + shift * 0.02) : 1.0;
+    const rsi = momentum.rsi14 ? Math.max(10, Math.min(90, momentum.rsi14 + shift * 0.8)) : 50;
+    const volRatio = momentum.volumeRatio10_50 ? Math.max(0.2, momentum.volumeRatio10_50 + shift * 0.02) : 1.0;
 
     return {
       ...momentum,
@@ -1015,7 +1015,7 @@ export default function StockPage({ params }: StockPageProps) {
                       />
                     </svg>
                     <div className="text-center z-10">
-                      <p className="font-mono text-2xl font-extrabold tracking-tight text-white transition-all duration-300">
+                      <p className="font-mono text-28 font-extrabold tracking-tight text-white transition-all duration-300">
                         {activeMomentum.score}
                       </p>
                       <div className="flex items-center justify-center gap-0.5 mt-0.5">
@@ -1042,7 +1042,7 @@ export default function StockPage({ params }: StockPageProps) {
                   {/* Micro-insight Line */}
                   <div className="mt-2.5 text-center px-4 max-w-[280px]">
                     <p className="text-[10px] text-slate-400 leading-normal font-sans italic">
-                      "{activeMomentum.insight}"
+                      &ldquo;{activeMomentum.insight}&rdquo;
                     </p>
                   </div>
                 </div>

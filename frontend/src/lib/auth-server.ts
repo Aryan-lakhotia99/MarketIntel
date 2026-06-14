@@ -18,7 +18,7 @@ import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { createServerClient } from "@insforge/sdk/ssr";
-import { insforgeAdmin, createInsforgeUserClient } from "./insforge";
+import { getInsforgeAdmin, createInsforgeUserClient } from "./insforge";
 import type { InsForgeClient } from "@insforge/sdk";
 
 const FASTAPI_SECRET = new TextEncoder().encode(
@@ -96,7 +96,7 @@ export async function requireAuth(req: NextRequest): Promise<AuthedUser> {
   }
 
   // 2. Get or provision user in InsForge auth.users via SECURITY DEFINER RPC
-  const { data: insforgeUserId, error: rpcError } = await insforgeAdmin.database
+  const { data: insforgeUserId, error: rpcError } = await getInsforgeAdmin().database
     .rpc("get_or_create_insforge_user", {
       p_email: email,
       p_name: null,
