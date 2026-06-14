@@ -1,0 +1,183 @@
+"use client";
+
+import { useEffect, useRef, useState, useMemo } from "react";
+
+type TradingViewLiveChartProps = {
+  symbol: string;
+  currency?: string;
+};
+
+export default function TradingViewLiveChart({ symbol, currency = "INR" }: TradingViewLiveChartProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const containerId = useMemo(() => `tradingview-live-chart-${Math.random().toString(36).substring(2, 9)}`, []);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  // Map backend symbols to TradingView symbols
+  const getTVSymbol = (sym: string): string => {
+    const cleanSym = sym.toUpperCase().trim();
+    
+    // 1. Index mappings (Standardized yfinance symbols to TradingView symbols)
+    const indexMap: Record<string, string> = {
+      // Indian Indices
+      "^NSEI": "BSE:NIFTYBEES",
+      "NIFTY": "BSE:NIFTYBEES",
+      "^BSESN": "BSE:SENSEX",
+      "SENSEX": "BSE:SENSEX",
+      "^NSEBANK": "BSE:BANKBEES",
+      "BANKNIFTY": "BSE:BANKBEES",
+      "^NSEMDCP50": "BSE:MIDCAP",
+      "^CNXIT": "BSE:INFY", // Fallback to a major constituent as IT index is restricted
+      "^CNXAUTO": "BSE:TATAMOTORS",
+      
+      // Global Indices
+      "^GSPC": "SP:SPX",
+      "SP500": "SP:SPX",
+      "^IXIC": "NASDAQ:IXIC",
+      "NASDAQ": "NASDAQ:IXIC",
+      "^DJI": "DJ:DJI",
+      "DOW_JONES": "DJ:DJI",
+      "^FTSE": "INDEX:FTSE",
+      "^GDAXI": "INDEX:DAX",
+      "^N225": "INDEX:N225",
+      "^HSI": "INDEX:HSI",
+      
+      // Commodities
+      "GC=F": "COMEX:GC1!",
+      "GOLD": "COMEX:GC1!",
+      "SI=F": "COMEX:SI1!",
+      "SILVER": "COMEX:SI1!",
+      "CL=F": "NYMEX:CL1!",
+      "CRUDE_OIL": "NYMEX:CL1!",
+      "NG=F": "NYMEX:NG1!",
+      "NATURAL_GAS": "NYMEX:NG1!",
+      "HG=F": "COMEX:HG1!",
+      "COPPER": "COMEX:HG1!",
+      
+      // Currencies
+      "USDINR=X": "FX_IDC:USDINR",
+      "USDEUR=X": "FX_IDC:USDEUR",
+      "USDGBP=X": "FX_IDC:USDGBP",
+      "USDJPY=X": "FX_IDC:USDJPY",
+    };
+
+    if (indexMap[cleanSym]) {
+      return indexMap[cleanSym];
+    }
+
+    // 2. NSE / BSE stocks (Map NSE (.NS) to BSE to bypass free widget restrictions)
+    if (cleanSym.endsWith(".NS")) {
+      return `BSE:${cleanSym.replace(".NS", "")}`;
+    }
+    if (cleanSym.endsWith(".BO")) {
+      return `BSE:${cleanSym.replace(".BO", "")}`;
+    }
+
+    // 3. Fallbacks for other suffixes:
+    if (cleanSym.endsWith("=F")) {
+      return `COMEX:${cleanSym.replace("=F", "")}1!`;
+    }
+    if (cleanSym.endsWith("=X")) {
+      return `FX_IDC:${cleanSym.replace("=X", "")}`;
+    }
+    if (cleanSym.startsWith("^")) {
+      return `INDEX:${cleanSym.replace("^", "")}`;
+    }
+
+    // 4. Currency-based fallback for US stocks
+    if (currency === "USD") {
+      return cleanSym; // TradingView will auto-resolve standard US tickers correctly
+    }
+
+    // Default to BSE for other Indian stocks to ensure widget loads successfully
+    return `BSE:${cleanSym}`;
+  };
+
+  // Effect 1: Handle script loading (run once on mount)
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).TradingView) {
+      setScriptLoaded(true);
+      return;
+    }
+
+    const existingScript = document.getElementById("tradingview-widget-script") as HTMLScriptElement | null;
+    if (existingScript) {
+      if ((window as any).TradingView) {
+        setScriptLoaded(true);
+      } else {
+        const handleLoad = () => setScriptLoaded(true);
+        existingScript.addEventListener("load", handleLoad);
+        return () => {
+          existingScript.removeEventListener("load", handleLoad);
+        };
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "tradingview-widget-script";
+    script.src = "https://s3.tradingview.com/tv.js";
+    script.type = "text/javascript";
+    script.async = true;
+    const handleLoad = () => setScriptLoaded(true);
+    script.addEventListener("load", handleLoad);
+    document.head.appendChild(script);
+
+    return () => {
+      script.removeEventListener("load", handleLoad);
+    };
+  }, []);
+
+  // Effect 2: Initialize widget when script is loaded or symbol changes
+  useEffect(() => {
+    if (!scriptLoaded) return;
+
+    const initializeWidget = () => {
+      const container = containerRef.current;
+      if (container) {
+        container.innerHTML = "";
+      }
+
+      if (typeof window !== "undefined" && (window as any).TradingView) {
+        try {
+          const tvSym = getTVSymbol(symbol);
+          console.log("[TradingView] Input symbol:", symbol, "Resolved symbol:", tvSym, "Currency:", currency);
+          new (window as any).TradingView.widget({
+            autosize: true,
+            symbol: tvSym,
+            interval: "D",
+            timezone: "Asia/Kolkata",
+            theme: "dark",
+            style: "1",
+            locale: "en",
+            enable_publishing: false,
+            hide_side_toolbar: false,
+            allow_symbol_change: true,
+            container_id: containerId,
+            studies: ["RSI@tv-basicstudies", "MASimple@tv-basicstudies"],
+            loading_screen: {
+              backgroundColor: "#0b0f19",
+              foregroundColor: "#6366f1",
+            },
+          });
+        } catch (e) {
+          console.error("TradingView widget init error:", e);
+        }
+      }
+    };
+
+    const timer = setTimeout(initializeWidget, 100);
+    return () => clearTimeout(timer);
+  }, [symbol, scriptLoaded]);
+
+  return (
+    <div className="relative h-[480px] w-full overflow-hidden rounded-xl border border-white/5 bg-slate-950/40 backdrop-blur-md">
+      <div id={containerId} ref={containerRef} className="h-full w-full" />
+      {!scriptLoaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-slate-950/80">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+          <p className="text-xs font-medium text-slate-400">Loading TradingView Terminal...</p>
+        </div>
+      )}
+    </div>
+  );
+}
