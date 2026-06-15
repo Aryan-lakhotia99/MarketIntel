@@ -444,7 +444,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(errorMsg);
       }
 
-      const data = await res.json();
+      await res.json();
 
       showToast("Password successfully reset! You can now log in.", "success");
       router.push("/login");
