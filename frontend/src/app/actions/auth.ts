@@ -12,8 +12,16 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerClient, clearAuthCookies } from "@insforge/sdk/ssr";
 
+const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "https://5dme8ge8.us-east.insforge.app";
+const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || "dummy-anon-key";
+
 export async function initiateGoogleOAuth() {
-  const client = createServerClient();
+  const cookieStore = await cookies();
+  const client = createServerClient({
+    baseUrl: INSFORGE_URL,
+    anonKey: INSFORGE_ANON_KEY,
+    cookies: cookieStore as any,
+  });
 
   const headersList = await headers();
   const host = headersList.get("host") || "localhost:3000";
@@ -32,7 +40,6 @@ export async function initiateGoogleOAuth() {
   }
 
   // Store the PKCE code verifier in an httpOnly cookie — the callback will use it
-  const cookieStore = await cookies();
   cookieStore.set("insforge_code_verifier", data.codeVerifier, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -50,7 +57,11 @@ export async function initiateGoogleOAuth() {
  */
 export async function getCurrentInsforgeUser() {
   const cookieStore = await cookies();
-  const client = createServerClient({ cookies: cookieStore as any });
+  const client = createServerClient({
+    baseUrl: INSFORGE_URL,
+    anonKey: INSFORGE_ANON_KEY,
+    cookies: cookieStore as any,
+  });
   const { data, error } = await client.auth.getCurrentUser();
   if (error || !data?.user) {
     return null;

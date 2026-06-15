@@ -63,9 +63,11 @@ export async function requireAuth(req: NextRequest): Promise<AuthedUser> {
       if (parts.length === 3) {
         const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
         if (payload.sub && payload.email) {
-          // Use the SSR server client — it reads insforge_access_token automatically
-          // This is the correct way for PostgREST RLS to pick up auth.uid()
-          const db = createServerClient({ cookies: cookieStore as any });
+          const db = createServerClient({
+            baseUrl: process.env.NEXT_PUBLIC_INSFORGE_URL || "https://5dme8ge8.us-east.insforge.app",
+            anonKey: process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || "dummy-anon-key",
+            cookies: cookieStore as any,
+          });
           return {
             email: payload.email as string,
             insforgeUserId: payload.sub as string,

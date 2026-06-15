@@ -40,7 +40,11 @@ export async function GET(request: NextRequest) {
   }
 
   // Exchange the code for a full session
-  const client = createServerClient();
+  const client = createServerClient({
+    baseUrl: process.env.NEXT_PUBLIC_INSFORGE_URL || "https://5dme8ge8.us-east.insforge.app",
+    anonKey: process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || "dummy-anon-key",
+    cookies: cookieStore as any,
+  });
   const { data, error: exchangeError } = await client.auth.exchangeOAuthCode(
     code,
     codeVerifier
