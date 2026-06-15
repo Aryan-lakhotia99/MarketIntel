@@ -6,5 +6,11 @@
  */
 import { createBrowserClient } from "@insforge/sdk/ssr";
 
+const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "https://5dme8ge8.us-east.insforge.app";
+const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || "dummy-anon-key";
+
 // Singleton — created once per browser page lifecycle
-export const insforge = createBrowserClient();
+export const insforge = createBrowserClient({
+  baseUrl: INSFORGE_URL,
+  anonKey: INSFORGE_ANON_KEY,
+});

@@ -8,8 +8,8 @@
  */
 import { createClient, createAdminClient } from "@insforge/sdk";
 
-const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL!;
-const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!;
+const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "https://5dme8ge8.us-east.insforge.app";
+const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || "dummy-anon-key";
 let adminClient: any = null;
 
 /** Admin client – bypasses RLS. Server-side only. Loaded lazily. */
