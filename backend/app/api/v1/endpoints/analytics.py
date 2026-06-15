@@ -9,7 +9,8 @@ from app.services.market_data import (
     fetch_market_snapshot,
     fetch_stock_quotes,
     fetch_stock_quote,
-    US_TICKERS
+    US_TICKERS,
+    YF_SESSION
 )
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -23,7 +24,7 @@ def fetch_history_for_symbol(sym: str):
     from app.services.market_data import _normalize_symbol
     try:
         norm_sym = _normalize_symbol(sym)
-        ticker = yf.Ticker(norm_sym)
+        ticker = yf.Ticker(norm_sym, session=YF_SESSION)
         hist = ticker.history(period="1mo")
         if not hist.empty and len(hist) >= 15:
             avg_vol = float(hist["Volume"].tail(20).mean())
@@ -101,7 +102,7 @@ async def scan_market_task():
         # Batch download 1-month daily history to initialize the metrics cache in a single HTTP request
         df = await loop.run_in_executor(
             None,
-            lambda: yf.download(ns_symbols, period="1mo", interval="1d", group_by="ticker", progress=False)
+            lambda: yf.download(ns_symbols, period="1mo", interval="1d", group_by="ticker", progress=False, session=YF_SESSION)
         )
         
         for sym, ns_sym in zip(symbols, ns_symbols):

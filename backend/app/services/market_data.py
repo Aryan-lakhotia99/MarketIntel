@@ -12,7 +12,16 @@ from typing import Any
 
 import httpx
 import pandas as pd
+import requests
 import yfinance as yf
+
+# Configure custom requests session with a standard browser User-Agent to bypass cloud hosting blocks
+YF_SESSION = requests.Session()
+YF_SESSION.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+})
 
 from app.schemas.market import (
     IndexQuote,
@@ -304,7 +313,7 @@ def _fetch_ticker_info(symbol: str) -> dict[str, Any]:
         if now - timestamp < CACHE_TTL:
             return cached_info
 
-    ticker = yf.Ticker(symbol)
+    ticker = yf.Ticker(symbol, session=YF_SESSION)
     info = {}
     try:
         info = ticker.info or {}
@@ -419,7 +428,7 @@ def fetch_market_snapshot() -> MarketSnapshot:
     
     try:
         # Perform single batch download (period="5d", interval="1d") to get daily close history
-        df = yf.download(symbols, period="5d", interval="1d", group_by="ticker", progress=False)
+        df = yf.download(symbols, period="5d", interval="1d", group_by="ticker", progress=False, session=YF_SESSION)
         
         for d in all_defs:
             price = None
@@ -533,7 +542,7 @@ def fetch_stock_quotes(symbols: list[str]) -> list[StockQuote]:
     
     try:
         # Batch download 1-year daily history to extract current metrics + 52-week high/low
-        df = yf.download(normalized_symbols, period="1y", interval="1d", group_by="ticker", progress=False)
+        df = yf.download(normalized_symbols, period="1y", interval="1d", group_by="ticker", progress=False, session=YF_SESSION)
     except Exception as e:
         print(f"[fetch_stock_quotes] Batch download failed: {e}. Falling back to individual fetching.")
         df = pd.DataFrame()
@@ -632,7 +641,7 @@ def fetch_stock_history(
     interval: str = "1d",
 ) -> StockHistoryResponse:
     normalized = _normalize_symbol(symbol)
-    ticker = yf.Ticker(normalized)
+    ticker = yf.Ticker(normalized, session=YF_SESSION)
     history = ticker.history(period=period, interval=interval)
 
     bars: list[StockHistoryBar] = []
