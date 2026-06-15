@@ -6,6 +6,10 @@ allowed_redirect_urls = [
   "http://localhost:3000/api/auth/callback",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3000/api/auth/callback",
+  "https://firstproject-usaa-git-main-aryan-lakhotia-s-projects.vercel.app",
+  "https://firstproject-usaa-git-main-aryan-lakhotia-s-projects.vercel.app/api/auth/callback",
+  "https://firstproject-usaa.vercel.app",
+  "https://firstproject-usaa.vercel.app/api/auth/callback",
 ]
 require_email_verification = false
 verify_email_method = "code"
