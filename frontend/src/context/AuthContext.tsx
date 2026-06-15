@@ -251,12 +251,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.detail || "Invalid email or password");
+        let errorMsg = "Invalid email or password";
+        try {
+          const data = await res.json();
+          errorMsg = data.detail || errorMsg;
+        } catch {
+          errorMsg = `Server returned status ${res.status}. Please check your API URL configuration.`;
+        }
+        throw new Error(errorMsg);
       }
 
+      const data = await res.json();
       const token = data.accessToken;
       setCookie("token", token, 1);
       localStorage.setItem("token", token);
@@ -288,12 +294,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.detail || "Signup failed");
+        let errorMsg = "Signup failed";
+        try {
+          const data = await res.json();
+          errorMsg = data.detail || errorMsg;
+        } catch {
+          errorMsg = `Server returned status ${res.status}. Please check your API URL configuration.`;
+        }
+        throw new Error(errorMsg);
       }
 
+      const data = await res.json();
       const token = data.accessToken;
       setCookie("token", token, 1);
       localStorage.setItem("token", token);
@@ -390,11 +402,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.detail || "Password recovery request failed");
+        let errorMsg = "Password recovery request failed";
+        try {
+          const data = await res.json();
+          errorMsg = data.detail || errorMsg;
+        } catch {
+          errorMsg = `Server returned status ${res.status}. Please check your API URL configuration.`;
+        }
+        throw new Error(errorMsg);
       }
+
+      const data = await res.json();
 
       showToast("Verification code generated. Please check console.", "success");
       return data.token;
@@ -414,11 +433,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, token, newPassword }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.detail || "Password reset failed");
+        let errorMsg = "Password reset failed";
+        try {
+          const data = await res.json();
+          errorMsg = data.detail || errorMsg;
+        } catch {
+          errorMsg = `Server returned status ${res.status}. Please check your API URL configuration.`;
+        }
+        throw new Error(errorMsg);
       }
+
+      const data = await res.json();
 
       showToast("Password successfully reset! You can now log in.", "success");
       router.push("/login");
@@ -441,10 +467,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({ name })
       });
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || "Failed to create watchlist");
+        let errorMsg = "Failed to create watchlist";
+        try {
+          const data = await res.json();
+          errorMsg = data.detail || errorMsg;
+        } catch {
+          errorMsg = `Server returned status ${res.status}. Please check your API URL configuration.`;
+        }
+        throw new Error(errorMsg);
       }
+      const data = await res.json();
       showToast(`Watchlist "${name}" created!`, "success");
       await fetchWatchlists();
       setActiveWatchlistId(data.id);
@@ -483,8 +516,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ watchlistId, symbol })
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Failed to add stock");
+        let errorMsg = "Failed to add stock";
+        try {
+          const data = await res.json();
+          errorMsg = data.detail || errorMsg;
+        } catch {
+          errorMsg = `Server returned status ${res.status}. Please check your API URL configuration.`;
+        }
+        throw new Error(errorMsg);
       }
       showToast(`Added ${symbol} to watchlist.`, "success");
     } catch (err: any) {
@@ -522,8 +561,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ watchlistId, symbol })
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Failed to remove stock");
+        let errorMsg = "Failed to remove stock";
+        try {
+          const data = await res.json();
+          errorMsg = data.detail || errorMsg;
+        } catch {
+          errorMsg = `Server returned status ${res.status}. Please check your API URL configuration.`;
+        }
+        throw new Error(errorMsg);
       }
       showToast(`Removed ${symbol} from watchlist.`, "info");
     } catch (err: any) {
