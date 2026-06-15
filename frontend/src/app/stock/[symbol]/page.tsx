@@ -1,11 +1,10 @@
 "use client";
 
 import { use, useEffect, useState, useMemo, useCallback } from "react";
-import { ArrowLeft, ExternalLink, Bot, Package, TrendingUp, TrendingDown, Waves, Activity, Cpu, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ExternalLink, Bot, Package, TrendingUp, TrendingDown, Waves, Activity, Cpu } from "lucide-react";
 import Link from "next/link";
 import CandlestickChart from "@/components/dashboard/CandlestickChart";
 import TradingViewLiveChart from "@/components/dashboard/TradingViewLiveChart";
-import { computeSMC } from "@/lib/smcEngine";
 
 import { GlassCard } from "@/components/ui/GlassCard";
 import { googleFinanceUrl } from "@/components/ui/StockLink";
@@ -28,66 +27,6 @@ import { cn } from "@/lib/utils";
 
 type StockPageProps = {
   params: Promise<{ symbol: string }>;
-};
-
-// Custom Dot to overlay Whale Deals on the Recharts AreaChart
-const CustomDot = (props: any) => {
-  const { cx, cy, payload } = props;
-  if (payload && payload.hasDeal) {
-    const isBuy = payload.dealSide === "BUY";
-    return (
-      <g>
-        <circle
-          cx={cx}
-          cy={cy}
-          r={7}
-          fill={isBuy ? "#10b981" : "#ef4444"}
-          stroke="#ffffff"
-          strokeWidth={1.5}
-        />
-        <circle
-          cx={cx}
-          cy={cy}
-          r={14}
-          fill="none"
-          stroke={isBuy ? "#10b981" : "#ef4444"}
-          strokeWidth={1.5}
-          className="animate-pulse"
-          style={{ transformOrigin: `${cx}px ${cy}px`, opacity: 0.6 }}
-        />
-      </g>
-    );
-  }
-  return null;
-};
-
-// Custom interactive Tooltip
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="rounded-xl border border-white/10 bg-slate-950/90 p-3 shadow-xl backdrop-blur-md">
-        <p className="text-[10px] font-semibold text-slate-500">{data.dateLabel}</p>
-        <p className="mt-1 text-sm font-semibold text-white">
-          Price: <span className="font-mono">{data.priceFormatted}</span>
-        </p>
-        <p className="text-[10px] text-slate-400">
-          Range: <span className="font-mono">{data.lowFormatted} - {data.highFormatted}</span>
-        </p>
-        <p className="text-[10px] text-slate-400">
-          Vol: <span className="font-mono">{data.volume.toLocaleString()}</span>
-        </p>
-        {data.hasDeal && (
-          <div className="mt-2 rounded bg-indigo-500/10 p-1.5 border border-indigo-500/20">
-            <p className="text-[9px] font-bold text-indigo-300">
-              ⚡ {data.deals.length} Large Deal(s)
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  }
-  return null;
 };
 
 const CHART_PRESETS = [

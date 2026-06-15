@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Flame, Zap, AlertTriangle, ArrowUpRight } from "lucide-react";
 import { fetchBreakoutEvents, type BreakoutEvent } from "@/lib/api";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -60,8 +61,8 @@ export default function BreakoutScanner() {
       setEvents(data);
       prevEventsRef.current = data;
       setLastUpdated(new Date());
-    } catch (err) {
-      console.error("Failed to load breakout events:", err);
+    } catch (err: any) {
+      console.warn("Failed to load breakout events:", err?.message || err);
     } finally {
       setLoading(false);
     }
@@ -289,11 +290,14 @@ export default function BreakoutScanner() {
                       </td>
 
                       {/* Action Icon */}
-                      <td className="p-3.5 text-center">
+                      <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-center">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-400 transition group-hover:border-white/10 group-hover:bg-indigo-500/10 group-hover:text-indigo-400">
+                          <Link
+                            href={`/stock/${event.symbol}`}
+                            className="flex h-6 w-6 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-400 transition group-hover:border-white/10 group-hover:bg-indigo-500/10 group-hover:text-indigo-400 cursor-pointer"
+                          >
                             <ArrowUpRight className="h-3 w-3" />
-                          </span>
+                          </Link>
                         </div>
                       </td>
                     </tr>

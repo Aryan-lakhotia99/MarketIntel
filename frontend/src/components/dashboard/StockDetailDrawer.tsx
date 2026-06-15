@@ -95,7 +95,7 @@ export function StockDetailDrawer() {
         setHistory(historyData);
         setMomentum(momentumData);
         setDerivatives(derivativesData);
-      } catch (err) {
+      } catch {
         if (isMounted) {
           setError("Failed to compile dashboard intelligence for this ticker.");
         }

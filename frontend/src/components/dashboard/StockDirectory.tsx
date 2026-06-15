@@ -2,16 +2,14 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { type StockDirectoryEntry } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, Search, SlidersHorizontal, TrendingDown, TrendingUp } from "lucide-react";
-import { GlassCard } from "@/components/ui/GlassCard";
+import { ArrowUpRight, Search, SlidersHorizontal } from "lucide-react";
 import { StockLink } from "@/components/ui/StockLink";
 
 type StockDirectoryProps = {
   stocks: StockDirectoryEntry[];
-  selectedSector: string | null;
-  onSelectSector: (sector: string | null) => void;
   loading: boolean;
 };
 
@@ -20,8 +18,6 @@ type SortOrder = "asc" | "desc";
 
 export default function StockDirectory({
   stocks,
-  selectedSector,
-  onSelectSector,
   loading,
 }: StockDirectoryProps) {
   const router = useRouter();
@@ -246,11 +242,14 @@ export default function StockDirectory({
                       </td>
 
                       {/* Action Icon */}
-                      <td className="p-3.5 text-center">
+                      <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-center">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-500 transition group-hover:border-white/10 group-hover:bg-indigo-500/10 group-hover:text-indigo-400">
+                          <Link
+                            href={`/stock/${stock.symbol}`}
+                            className="flex h-6 w-6 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-slate-500 transition group-hover:border-white/10 group-hover:bg-indigo-500/10 group-hover:text-indigo-400 cursor-pointer"
+                          >
                             <ArrowUpRight className="h-3 w-3" />
-                          </span>
+                          </Link>
                         </div>
                       </td>
                     </tr>

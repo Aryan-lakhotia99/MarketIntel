@@ -276,8 +276,8 @@ export async function fetchBreakoutEvents(): Promise<BreakoutEvent[]> {
     const response = await fetch(`${API_BASE}/analytics/breakouts`, { cache: "no-store" });
     if (!response.ok) throw new Error("Failed to fetch breakout events");
     return response.json();
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    console.warn("fetchBreakoutEvents failed:", error?.message || error);
     return [];
   }
 }

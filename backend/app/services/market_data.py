@@ -399,29 +399,112 @@ def _fetch_index_quotes(definitions: tuple[IndexDefinition, ...]) -> list[IndexQ
     return quotes
 
 
+_MARKET_SNAPSHOT_CACHE: tuple[float, MarketSnapshot] | None = None
+MARKET_SNAPSHOT_TTL = 4.0  # 4 seconds cache for the entire snapshot
+
 def fetch_market_snapshot() -> MarketSnapshot:
     """Fetch all configured Indian and global index quotes, commodities, and currencies."""
-    from concurrent.futures import ThreadPoolExecutor
+    global _MARKET_SNAPSHOT_CACHE
+    now = time.time()
+    
+    if _MARKET_SNAPSHOT_CACHE:
+        timestamp, cached_snapshot = _MARKET_SNAPSHOT_CACHE
+        if now - timestamp < MARKET_SNAPSHOT_TTL:
+            return cached_snapshot
 
     all_defs = INDIAN_INDICES + GLOBAL_INDICES + COMMODITY_INDICES + CURRENCY_INDICES
+    symbols = [d.symbol for d in all_defs]
+    
+    quotes_by_key: dict[str, IndexQuote] = {}
+    
+    try:
+        # Perform single batch download (period="5d", interval="1d") to get daily close history
+        df = yf.download(symbols, period="5d", interval="1d", group_by="ticker", progress=False)
+        
+        for d in all_defs:
+            price = None
+            previous_close = None
+            change = None
+            change_percent = None
+            open_val = None
+            day_high = None
+            day_low = None
+            volume = None
+            
+            if d.symbol in df.columns.levels[0]:
+                sym_df = df[d.symbol].dropna(subset=["Close"])
+                if not sym_df.empty:
+                    latest = sym_df.iloc[-1]
+                    price = _safe_float(latest["Close"])
+                    open_val = _safe_float(latest["Open"])
+                    day_high = _safe_float(latest["High"])
+                    day_low = _safe_float(latest["Low"])
+                    volume = _safe_int(latest["Volume"])
+                    
+                    if len(sym_df) >= 2:
+                        previous_close = _safe_float(sym_df["Close"].iloc[-2])
+                        if price is not None and previous_close is not None:
+                            change = price - previous_close
+                            change_percent = (change / previous_close) * 100.0
+            
+            # Fallback to individual fetch if symbol was missing or download failed for this symbol
+            if price is None:
+                try:
+                    info = _fetch_ticker_info(d.symbol)
+                    quote = _build_index_quote(d, info)
+                    quotes_by_key[d.key] = quote
+                    continue
+                except Exception:
+                    pass
+            
+            quotes_by_key[d.key] = IndexQuote(
+                key=d.key,
+                name=d.name,
+                symbol=d.symbol,
+                region=d.region,
+                price=price,
+                change=change,
+                changePercent=change_percent,
+                previousClose=previous_close,
+                open=open_val,
+                dayHigh=day_high,
+                dayLow=day_low,
+                volume=volume,
+                currency="INR" if d.symbol.endswith(".NS") or d.symbol.startswith("^NSE") or d.symbol.startswith("^BSE") or "inr" in d.key else "USD",
+                marketState="OPEN" if (now % 86400 >= 33300 and now % 86400 < 55800) else "CLOSED",
+                lastUpdated=datetime.now(tz=UTC),
+            )
+            
+    except Exception as e:
+        print(f"Batch fetch_market_snapshot failed: {e}. Falling back to ThreadPoolExecutor...")
+        # Fallback to ThreadPoolExecutor if batch fails entirely
+        from concurrent.futures import ThreadPoolExecutor
+        def fetch_one(definition: IndexDefinition) -> tuple[str, IndexQuote]:
+            try:
+                info = _fetch_ticker_info(definition.symbol)
+                quote = _build_index_quote(definition, info)
+                return (definition.key, quote)
+            except Exception:
+                return (definition.key, IndexQuote(
+                    key=definition.key, name=definition.name, symbol=definition.symbol, region=definition.region,
+                    price=None, change=None, changePercent=None, previousClose=None, open=None, dayHigh=None, dayLow=None, volume=None,
+                    currency="USD", marketState="CLOSED", lastUpdated=datetime.now(tz=UTC)
+                ))
 
-    def fetch_one(definition: IndexDefinition) -> tuple[str, IndexQuote]:
-        info = _fetch_ticker_info(definition.symbol)
-        quote = _build_index_quote(definition, info)
-        return (definition.key, quote)
+        with ThreadPoolExecutor(max_workers=len(all_defs) or 1) as executor:
+            results = list(executor.map(fetch_one, all_defs))
+        quotes_by_key = dict(results)
 
-    with ThreadPoolExecutor(max_workers=len(all_defs) or 1) as executor:
-        results = list(executor.map(fetch_one, all_defs))
-
-    quotes_by_key = dict(results)
-
-    return MarketSnapshot(
-        fetched_at=datetime.now(tz=UTC),
-        indian_indices=[quotes_by_key[d.key] for d in INDIAN_INDICES],
-        global_indices=[quotes_by_key[d.key] for d in GLOBAL_INDICES],
+    snapshot = MarketSnapshot(
+        fetchedAt=datetime.now(tz=UTC),
+        indianIndices=[quotes_by_key[d.key] for d in INDIAN_INDICES],
+        globalIndices=[quotes_by_key[d.key] for d in GLOBAL_INDICES],
         commodities=[quotes_by_key[d.key] for d in COMMODITY_INDICES],
         currencies=[quotes_by_key[d.key] for d in CURRENCY_INDICES],
     )
+    
+    _MARKET_SNAPSHOT_CACHE = (now, snapshot)
+    return snapshot
 
 
 def fetch_index_by_key(key: str) -> IndexQuote | None:
@@ -440,31 +523,107 @@ def fetch_stock_quote(symbol: str) -> StockQuote:
 
 
 def fetch_stock_quotes(symbols: list[str]) -> list[StockQuote]:
-    from concurrent.futures import ThreadPoolExecutor
-    
-    def fetch_one(sym: str) -> StockQuote:
-        try:
-            return fetch_stock_quote(sym)
-        except Exception:
-            return StockQuote(
-                symbol=sym.upper(),
-                name=sym.upper(),
-                exchange="Unknown",
-                price=None,
-                change=None,
-                change_percent=None,
-                previous_close=None,
-                open=None,
-                day_high=None,
-                day_low=None,
-                volume=None,
-                market_cap=None,
-                currency="USD" if sym.upper() in US_TICKERS else "INR",
-                last_updated=datetime.now(tz=UTC)
-            )
+    if not symbols:
+        return []
 
-    with ThreadPoolExecutor(max_workers=min(32, len(symbols) or 1)) as executor:
-        return list(executor.map(fetch_one, symbols))
+    # Clean up symbols for yfinance batch download
+    normalized_symbols = [_normalize_symbol(s) for s in symbols]
+    
+    quotes: list[StockQuote] = []
+    
+    try:
+        # Batch download 1-year daily history to extract current metrics + 52-week high/low
+        df = yf.download(normalized_symbols, period="1y", interval="1d", group_by="ticker", progress=False)
+    except Exception as e:
+        print(f"[fetch_stock_quotes] Batch download failed: {e}. Falling back to individual fetching.")
+        df = pd.DataFrame()
+
+    for original_sym, norm_sym in zip(symbols, normalized_symbols):
+        quote = None
+        
+        try:
+            if not df.empty:
+                # Handle single vs multiple ticker structure in group_by="ticker" DataFrames
+                if isinstance(df.columns, pd.MultiIndex):
+                    has_col = norm_sym in df.columns.levels[0]
+                    sym_df = df[norm_sym].dropna(subset=["Close"]) if has_col else pd.DataFrame()
+                else:
+                    # Single symbol downloaded, columns are standard index
+                    sym_df = df.dropna(subset=["Close"])
+                
+                if not sym_df.empty:
+                    latest = sym_df.iloc[-1]
+                    price = _safe_float(latest["Close"])
+                    open_val = _safe_float(latest["Open"])
+                    day_high = _safe_float(latest["High"])
+                    day_low = _safe_float(latest["Low"])
+                    volume = _safe_int(latest["Volume"])
+                    
+                    previous_close = None
+                    change = None
+                    change_percent = None
+                    
+                    if len(sym_df) >= 2:
+                        previous_close = _safe_float(sym_df["Close"].iloc[-2])
+                        if price is not None and previous_close is not None:
+                            change = price - previous_close
+                            change_percent = (change / previous_close) * 100.0
+                    
+                    # 52-week High/Low (excluding current active trading session row)
+                    hist_df = sym_df.iloc[:-1] if len(sym_df) > 1 else sym_df
+                    fifty_two_week_high = _safe_float(hist_df["High"].max())
+                    fifty_two_week_low = _safe_float(hist_df["Low"].min())
+                    
+                    info = {
+                        "regularMarketPrice": price,
+                        "regularMarketPreviousClose": previous_close,
+                        "regularMarketChange": change,
+                        "regularMarketChangePercent": change_percent,
+                        "regularMarketOpen": open_val,
+                        "regularMarketDayHigh": day_high,
+                        "regularMarketDayLow": day_low,
+                        "regularMarketVolume": volume,
+                        "fiftyTwoWeekHigh": fifty_two_week_high,
+                        "fiftyTwoWeekLow": fifty_two_week_low,
+                        "currency": "USD" if original_sym.upper() in US_TICKERS else "INR",
+                        "shortName": original_sym.upper(),
+                    }
+                    
+                    # Update cache so that concurrent singular lookups benefit
+                    _TICKER_CACHE[norm_sym] = (time.time(), info)
+                    _LAST_GOOD_CACHE[norm_sym] = info
+                    
+                    # Build StockQuote
+                    quote = _build_stock_quote(original_sym, info)
+        except Exception as ex:
+            print(f"[fetch_stock_quotes] Parsing failed for {original_sym}: {ex}")
+            
+        # Fallback to individual fetch if parser failed or data was missing
+        if quote is None:
+            try:
+                info = _fetch_ticker_info(norm_sym)
+                quote = _build_stock_quote(original_sym, info)
+            except Exception:
+                quote = StockQuote(
+                    symbol=original_sym.upper(),
+                    name=original_sym.upper(),
+                    exchange="Unknown",
+                    price=None,
+                    change=None,
+                    change_percent=None,
+                    previous_close=None,
+                    open=None,
+                    day_high=None,
+                    day_low=None,
+                    volume=None,
+                    market_cap=None,
+                    currency="USD" if original_sym.upper() in US_TICKERS else "INR",
+                    last_updated=datetime.now(tz=UTC)
+                )
+        
+        quotes.append(quote)
+        
+    return quotes
 
 
 def fetch_stock_history(

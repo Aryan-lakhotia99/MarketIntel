@@ -19,7 +19,6 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { createServerClient } from "@insforge/sdk/ssr";
 import { getInsforgeAdmin, createInsforgeUserClient } from "./insforge";
-import type { InsForgeClient } from "@insforge/sdk";
 
 const FASTAPI_SECRET = new TextEncoder().encode(
   process.env.FASTAPI_JWT_SECRET ?? "SUPER_SECRET_KEY_MARKET_INTEL_2026"

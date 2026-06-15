@@ -10,7 +10,6 @@ import SectorHeatmap from "@/components/dashboard/SectorHeatmap";
 import StockDirectory from "@/components/dashboard/StockDirectory";
 import BreakoutScanner from "@/components/dashboard/BreakoutScanner";
 import { StockDetailDrawer } from "@/components/dashboard/StockDetailDrawer";
-import { cn } from "@/lib/utils";
 import {
   fetchFiiDiiFlows,
   fetchWhaleTracker,
@@ -117,12 +116,11 @@ export default function Home() {
       fetchFiiDiiFlows().catch(() => null),
       fetchWhaleTracker().catch(() => []),
       fetchLiveNews().catch(() => ({ catalysts: [], risks: [] })),
-    ]).then(([fiiDiiData, dealsData, newsData]) => {
+    ]).then(([fiiDiiData, dealsData]) => {
       const fiiNet = fiiDiiData?.fii?.netValueCr ?? 0;
       const diiNet = fiiDiiData?.dii?.netValueCr ?? 0;
       const dealsCount = dealsData.length;
-      const catalystsCount = newsData?.catalysts?.length ?? 0;
-      const risksCount = newsData?.risks?.length ?? 0;
+
 
 
 
@@ -202,8 +200,6 @@ export default function Home() {
             </div>
             <StockDirectory
               stocks={stockDirectory}
-              selectedSector={selectedSector}
-              onSelectSector={setSelectedSector}
               loading={loadingDirectory}
             />
           </GlassCard>

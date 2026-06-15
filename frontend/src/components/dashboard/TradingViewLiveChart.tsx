@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useId, useCallback } from "react";
+import { AlertTriangle } from "lucide-react";
 
 type TradingViewLiveChartProps = {
   symbol: string;
@@ -93,6 +94,9 @@ export default function TradingViewLiveChart({ symbol, currency = "INR" }: Tradi
     return `BSE:${cleanSym}`;
   }, [currency]);
 
+  const tvSymbol = getTVSymbol(symbol);
+  const isIndianStock = tvSymbol.startsWith("BSE:") || tvSymbol.startsWith("NSE:") || currency === "INR";
+
   // Effect 1: Handle script loading (run once on mount)
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).TradingView) {
@@ -140,11 +144,10 @@ export default function TradingViewLiveChart({ symbol, currency = "INR" }: Tradi
 
       if (typeof window !== "undefined" && (window as any).TradingView) {
         try {
-          const tvSym = getTVSymbol(symbol);
-          console.log("[TradingView] Input symbol:", symbol, "Resolved symbol:", tvSym, "Currency:", currency);
+          console.log("[TradingView] Input symbol:", symbol, "Resolved symbol:", tvSymbol, "Currency:", currency);
           new (window as any).TradingView.widget({
             autosize: true,
-            symbol: tvSym,
+            symbol: tvSymbol,
             interval: "D",
             timezone: "Asia/Kolkata",
             theme: "dark",
@@ -168,15 +171,32 @@ export default function TradingViewLiveChart({ symbol, currency = "INR" }: Tradi
 
     const timer = setTimeout(initializeWidget, 100);
     return () => clearTimeout(timer);
-  }, [symbol, scriptLoaded, containerId, currency, getTVSymbol]);
+  }, [symbol, scriptLoaded, containerId, currency, tvSymbol]);
 
   return (
-    <div className="relative h-[480px] w-full overflow-hidden rounded-xl border border-white/5 bg-slate-950/40 backdrop-blur-md">
-      <div id={containerId} ref={containerRef} className="h-full w-full" />
-      {!scriptLoaded && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-slate-950/80">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-          <p className="text-xs font-medium text-slate-400">Loading TradingView Terminal...</p>
+    <div className="flex flex-col gap-4 w-full">
+      <div className="relative h-[480px] w-full overflow-hidden rounded-xl border border-white/5 bg-slate-950/40 backdrop-blur-md">
+        <div id={containerId} ref={containerRef} className="h-full w-full" />
+        {!scriptLoaded && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-slate-950/80">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+            <p className="text-xs font-medium text-slate-400">Loading TradingView Terminal...</p>
+          </div>
+        )}
+      </div>
+
+      {isIndianStock && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-200/90 leading-relaxed shadow-sm">
+          <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold text-amber-300">Indian Market Restriction (BSE / NSE)</p>
+            <p>
+              TradingView&apos;s free widget does not license real-time intraday data feeds for Indian exchanges. Selecting small timeframes like <code className="bg-amber-950/40 px-1.5 py-0.5 rounded font-mono text-[10px] text-amber-300">1m</code>, <code className="bg-amber-950/40 px-1.5 py-0.5 rounded font-mono text-[10px] text-amber-300">30m</code>, or <code className="bg-amber-950/40 px-1.5 py-0.5 rounded font-mono text-[10px] text-amber-300">1h</code> will fail to load or display <span className="font-medium text-white">&quot;No data&quot;</span>.
+            </p>
+            <p className="pt-1 text-amber-400/95">
+              💡 <span className="font-semibold text-white">Workaround:</span> Switch to the <strong className="text-indigo-400 font-bold">SMC Algorithmic Chart</strong> tab above. Our custom chart uses high-frequency data from Yahoo Finance, which fully supports all intraday timeframes (from 1 min up to 1 hour) for Indian stocks!
+            </p>
+          </div>
         </div>
       )}
     </div>

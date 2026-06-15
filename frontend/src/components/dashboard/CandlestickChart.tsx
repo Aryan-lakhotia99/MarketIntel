@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { createChart, ColorType, LineStyle, IChartApi, ISeriesApi, CandlestickSeries, LineSeries, HistogramSeries, createSeriesMarkers, TickMarkType } from "lightweight-charts";
 import { type WhaleDeal } from "@/lib/mock-data";
-import { computeSMC, OHLCVBar } from "@/lib/smcEngine";
-import { Eye, EyeOff, Sliders, TrendingUp, HelpCircle } from "lucide-react";
+import { computeSMC } from "@/lib/smcEngine";
+import { Eye, EyeOff, Sliders, HelpCircle } from "lucide-react";
 
 type CandlestickChartProps = {
   bars: any[];
@@ -64,7 +64,7 @@ export default function CandlestickChart({
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
         return `${yyyy}-${mm}-${dd}`;
-      } catch (e) {
+      } catch {
         return isoDate.split("T")[0].split(" ")[0];
       }
     };
@@ -72,7 +72,7 @@ export default function CandlestickChart({
     const toChartTimeValue = (isoDate: string): number => {
       try {
         return Math.floor(new Date(isoDate).getTime() / 1000);
-      } catch (e) {
+      } catch {
         return 0;
       }
     };
@@ -256,7 +256,7 @@ export default function CandlestickChart({
           timeVisible: isIntraday,
           secondsVisible: false,
           fixRightEdge: true,
-          tickMarkFormatter: (time: any, tickMarkType: any, locale: string) => {
+          tickMarkFormatter: (time: any, tickMarkType: any) => {
             if (typeof time === "number") {
               if (maxTimestampRef.current && time > maxTimestampRef.current) {
                 return "";
@@ -339,7 +339,7 @@ export default function CandlestickChart({
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
         return `${yyyy}-${mm}-${dd}`;
-      } catch (e) {
+      } catch {
         return isoDate.split("T")[0].split(" ")[0];
       }
     };
@@ -352,7 +352,7 @@ export default function CandlestickChart({
     activeSeriesListRef.current.forEach((s) => {
       try {
         chart?.removeSeries(s);
-      } catch (e) {
+      } catch {
         // Series might have been removed already
       }
     });
@@ -562,7 +562,7 @@ export default function CandlestickChart({
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [formattedBars, showEma, showStructure, showOBs, showFVGs, deals, smcResult, interval, hoveredInsight]);
+  }, [formattedBars, showEma, showStructure, showOBs, showFVGs, deals, smcResult, interval, hoveredInsight, currencySymbol]);
 
   return (
     <div className="flex flex-col space-y-4">
