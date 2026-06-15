@@ -8,14 +8,17 @@
  *   can complete the exchange.
  * - Redirects the browser to Google's consent screen.
  */
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerClient, clearAuthCookies } from "@insforge/sdk/ssr";
 
 export async function initiateGoogleOAuth() {
   const client = createServerClient();
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https";
+  const appUrl = `${protocol}://${host}`;
   const callbackUrl = `${appUrl}/api/auth/callback`;
 
   const { data, error } = await client.auth.signInWithOAuth("google", {
