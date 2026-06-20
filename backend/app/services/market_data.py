@@ -596,6 +596,7 @@ def fetch_stock_quotes(symbols: list[str]) -> list[StockQuote]:
                         "fiftyTwoWeekLow": fifty_two_week_low,
                         "currency": "USD" if original_sym.upper() in US_TICKERS else "INR",
                         "shortName": original_sym.upper(),
+                        "regularMarketTime": latest.name.timestamp() if hasattr(latest.name, "timestamp") else None,
                     }
                     
                     # Update cache so that concurrent singular lookups benefit

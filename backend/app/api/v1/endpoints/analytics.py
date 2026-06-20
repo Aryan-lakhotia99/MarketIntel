@@ -17,6 +17,18 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 BREAKOUT_EVENTS = deque(maxlen=100)
 _HISTORICAL_CACHE = {}
+_PROCESSED_BREAKOUT_KEYS = set()
+
+def is_market_open() -> bool:
+    from datetime import timezone
+    now_utc = datetime.now(timezone.utc)
+    ist = now_utc + timedelta(hours=5, minutes=30)
+    day = ist.weekday()
+    if day >= 5: # Saturday or Sunday
+        return False
+    time_val = ist.hour * 100 + ist.minute
+    return 915 <= time_val < 1530
+
 
 
 def fetch_history_for_symbol(sym: str):
@@ -40,47 +52,50 @@ def fetch_history_for_symbol(sym: str):
 
 
 def populate_initial_events():
+    from app.services.market_data import _LAST_GOOD_CACHE, US_TICKERS
     now = datetime.now()
-    mock_events = [
-        {
-            "time": (now - timedelta(minutes=2)).strftime("%H:%M:%S"),
-            "symbol": "RELIANCE",
-            "ltp": 1293.0,
-            "changePercent": 2.38,
-            "volume": 11987077,
-            "multiplierStatus": "52W High Breakout",
-            "type": "52w_high"
-        },
-        {
-            "time": (now - timedelta(minutes=5)).strftime("%H:%M:%S"),
-            "symbol": "TCS",
-            "ltp": 2161.4,
-            "changePercent": 1.21,
-            "volume": 2124114,
-            "multiplierStatus": "2.8x Vol Spike",
-            "type": "volume_breakout"
-        },
-        {
-            "time": (now - timedelta(minutes=12)).strftime("%H:%M:%S"),
-            "symbol": "AAPL",
-            "ltp": 291.13,
-            "changePercent": 1.5,
-            "volume": 52140000,
-            "multiplierStatus": "52W High Breakout",
-            "type": "52w_high"
-        },
-        {
-            "time": (now - timedelta(minutes=18)).strftime("%H:%M:%S"),
-            "symbol": "TECHM",
-            "ltp": 1429.2,
-            "changePercent": -2.45,
-            "volume": 2460245,
-            "multiplierStatus": "52W Low Breakdown",
-            "type": "52w_low"
-        }
+    
+    targets = [
+        {"symbol": "RELIANCE", "type": "52w_high", "multiplierStatus": "52W High Breakout", "delay": 2},
+        {"symbol": "TCS", "type": "volume_breakout", "multiplierStatus": "2.8x Vol Spike", "delay": 5},
+        {"symbol": "AAPL", "type": "52w_high", "multiplierStatus": "52W High Breakout", "delay": 12},
+        {"symbol": "TECHM", "type": "52w_low", "multiplierStatus": "52W Low Breakdown", "delay": 18},
     ]
-    for e in mock_events:
-        BREAKOUT_EVENTS.append(BreakoutEvent(**e))
+    
+    for t in targets:
+        sym = t["symbol"]
+        norm_sym = f"{sym}.NS" if sym not in US_TICKERS else sym
+        
+        cached = _LAST_GOOD_CACHE.get(norm_sym)
+        if cached:
+            ltp = cached.get("regularMarketPrice") or cached.get("currentPrice") or 0.0
+            chg = cached.get("regularMarketChangePercent") or cached.get("changePercent") or 0.0
+            vol = cached.get("regularMarketVolume") or cached.get("volume") or 1000000
+        else:
+            # Realistic fallbacks if cache is not yet populated
+            defaults = {
+                "RELIANCE": (2450.0, 1.25, 5000000),
+                "TCS": (3850.0, 0.75, 2000000),
+                "AAPL": (180.0, 0.45, 30000000),
+                "TECHM": (1250.0, -1.2, 1500000),
+            }
+            ltp, chg, vol = defaults.get(sym, (100.0, 0.0, 1000000))
+            
+        # Track in processed breakouts so they are not re-triggered
+        trade_date_str = now.strftime("%Y-%m-%d")
+        _PROCESSED_BREAKOUT_KEYS.add((sym, t["type"], trade_date_str))
+
+        BREAKOUT_EVENTS.append(
+            BreakoutEvent(
+                time=(now - timedelta(minutes=t["delay"])).strftime("%H:%M:%S"),
+                symbol=sym,
+                ltp=round(ltp, 2),
+                changePercent=round(chg, 2),
+                volume=vol,
+                multiplierStatus=t["multiplierStatus"],
+                type=t["type"]
+            )
+        )
 
 
 # Populate once on module import
@@ -150,7 +165,10 @@ async def scan_market_task():
                 high_52w = q.fifty_two_week_high
                 day_high = q.day_high or ltp
                 if high_52w and day_high >= high_52w:
-                    if not any(e.symbol == sym and e.type == "52w_high" for e in list(BREAKOUT_EVENTS)[:10]):
+                    trade_date = q.last_updated.strftime("%Y-%m-%d") if q.last_updated else datetime.now().strftime("%Y-%m-%d")
+                    key = (sym, "52w_high", trade_date)
+                    if key not in _PROCESSED_BREAKOUT_KEYS:
+                        _PROCESSED_BREAKOUT_KEYS.add(key)
                         BREAKOUT_EVENTS.appendleft(
                             BreakoutEvent(
                                 time=now_str,
@@ -168,7 +186,10 @@ async def scan_market_task():
                 low_52w = q.fifty_two_week_low
                 day_low = q.day_low or ltp
                 if low_52w and day_low <= low_52w:
-                    if not any(e.symbol == sym and e.type == "52w_low" for e in list(BREAKOUT_EVENTS)[:10]):
+                    trade_date = q.last_updated.strftime("%Y-%m-%d") if q.last_updated else datetime.now().strftime("%Y-%m-%d")
+                    key = (sym, "52w_low", trade_date)
+                    if key not in _PROCESSED_BREAKOUT_KEYS:
+                        _PROCESSED_BREAKOUT_KEYS.add(key)
                         BREAKOUT_EVENTS.appendleft(
                             BreakoutEvent(
                                 time=now_str,
@@ -189,7 +210,10 @@ async def scan_market_task():
                     max_close = hist_data.get("max_close_20d", 999999.0)
                     
                     if ltp > max_close and vol > 2.5 * avg_vol:
-                        if not any(e.symbol == sym and e.type == "volume_breakout" for e in list(BREAKOUT_EVENTS)[:10]):
+                        trade_date = q.last_updated.strftime("%Y-%m-%d") if q.last_updated else datetime.now().strftime("%Y-%m-%d")
+                        key = (sym, "volume_breakout", trade_date)
+                        if key not in _PROCESSED_BREAKOUT_KEYS:
+                            _PROCESSED_BREAKOUT_KEYS.add(key)
                             ratio = vol / avg_vol
                             BREAKOUT_EVENTS.appendleft(
                                 BreakoutEvent(
@@ -205,9 +229,9 @@ async def scan_market_task():
                             new_event_added = True
 
             # Showcase Simulator: If no new live breakouts triggered this loop cycle,
-            # inject a realistic simulated breakout to keep the dashboard active and alive
+            # and the market is currently open, inject a realistic simulated breakout to keep the dashboard active
             import random
-            if not new_event_added and random.random() < 0.40:
+            if is_market_open() and not new_event_added and random.random() < 0.40:
                 sim_sym = random.choice(symbols)
                 sim_quote = next((q for q in quotes if q.symbol.split(".")[0].upper() == sim_sym), None)
                 if sim_quote and sim_quote.price is not None:
