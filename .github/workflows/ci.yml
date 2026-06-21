@@ -1,0 +1,97 @@
+name: Full-Stack CI Pipeline
+
+on:
+  push:
+    branches: [ main, frist-branch ]
+  pull_request:
+    branches: [ main, frist-branch ]
+
+jobs:
+  check-structure:
+    name: Check Project Structure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Directories and Files
+        run: |
+          echo "Verifying project structure..."
+          # Check backend files
+          if [ ! -f "backend/requirements.txt" ]; then
+            echo "Error: backend/requirements.txt not found!"
+            exit 1
+          fi
+          if [ ! -f "backend/app/main.py" ]; then
+            echo "Error: backend/app/main.py not found!"
+            exit 1
+          fi
+          if [ ! -f "backend/app/core/db.py" ]; then
+            echo "Error: backend/app/core/db.py not found!"
+            exit 1
+          fi
+          # Check frontend files
+          if [ ! -f "frontend/package.json" ]; then
+            echo "Error: frontend/package.json not found!"
+            exit 1
+          fi
+          if [ ! -f "frontend/src/app/page.tsx" ]; then
+            echo "Error: frontend/src/app/page.tsx not found!"
+            exit 1
+          fi
+          echo "Project structure verified successfully."
+
+  backend-test:
+    name: Backend Lint & Compile Check
+    runs-on: ubuntu-latest
+    needs: check-structure
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Python Compile Syntax Check
+        run: |
+          python -m py_compile backend/app/main.py backend/app/core/db.py
+          # Compile all backend python files to catch any syntax errors
+          python -m compileall backend/app/
+
+  frontend-build:
+    name: Frontend Build & Typecheck
+    runs-on: ubuntu-latest
+    needs: check-structure
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Next.js Compile and Build
+        working-directory: ./frontend
+        env:
+          # Use dummy env variables for build validation
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:8000/api/v1
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_INSFORGE_URL: https://5dme8ge8.us-east.insforge.app
+          NEXT_PUBLIC_INSFORGE_ANON_KEY: dummy_anon_key
+          INSFORGE_API_KEY: dummy_api_key
+          INSFORGE_JWT_SECRET: dummy_jwt_secret
+        run: npm run build
