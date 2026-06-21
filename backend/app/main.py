@@ -43,6 +43,16 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 
 
+
+@app.get("/")
+def read_root() -> dict[str, str]:
+    return {
+        "status": "online",
+        "message": "Market Intelligence API is running successfully.",
+        "documentation": "/docs"
+    }
+
+
 @app.get("/health")
 def health_check() -> dict[str, str]:
     return {"status": "ok", "service": settings.app_name, "version": settings.app_version}
