@@ -10,7 +10,6 @@ import { StockLink } from "@/components/ui/StockLink";
 import { fetchMarketSnapshot, fetchWatchlistQuotes, fetchNSEList, fetchFiiDiiFlows, type LiveMarketSnapshot } from "@/lib/api";
 import { type FiiDiiSnapshot } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/context/AuthContext";
 
 import { MiniSparkline } from "./MiniSparkline";
 
@@ -196,37 +195,7 @@ export function GlobalDirectionPanel() {
   const [activeTab, setActiveTab] = useState<"indices" | "commodities" | "currencies" | "watchlist">("indices");
   const [marketData, setMarketData] = useState<LiveMarketSnapshot | null>(null);
   const [fiiDii, setFiiDii] = useState<FiiDiiSnapshot | null>(null);
-  
-  // Auth and database watchlists
-  const {
-    isAuthenticated,
-    watchlists,
-    activeWatchlistId,
-    setActiveWatchlistId,
-    createWatchlist,
-    addToWatchlist,
-    removeFromWatchlist
-  } = useAuth();
-  
   const [localWatchlistSymbols, setLocalWatchlistSymbols] = useState<string[]>([]);
-  const [newWatchlistName, setNewWatchlistName] = useState("");
-  const [showCreateWl, setShowCreateWl] = useState(false);
-  
-  // Initialize local fallback on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("watchlist");
-      setLocalWatchlistSymbols(saved ? JSON.parse(saved) : ["RELIANCE", "TCS", "INFY"]);
-    }
-  }, []);
-  
-  const watchlistSymbols = useMemo(() => {
-    if (isAuthenticated) {
-      const activeWatchlist = watchlists.find((w) => w.id === activeWatchlistId);
-      return activeWatchlist ? activeWatchlist.items : EMPTY_ARRAY;
-    }
-    return localWatchlistSymbols;
-  }, [isAuthenticated, watchlists, activeWatchlistId, localWatchlistSymbols]);
   const [watchlistQuotes, setWatchlistQuotes] = useState<any[]>([]);
   const [watchlistQuery, setWatchlistQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -299,6 +268,10 @@ export function GlobalDirectionPanel() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
+  const watchlistSymbols = useMemo(() => {
+    return localWatchlistSymbols;
+  }, [localWatchlistSymbols]);
+
   // Fetch watchlist quotes when symbols change
   useEffect(() => {
     if (watchlistSymbols.length > 0) {
@@ -331,19 +304,10 @@ export function GlobalDirectionPanel() {
       return;
     }
 
-    if (isAuthenticated) {
-      if (activeWatchlistId) {
-        try {
-          await addToWatchlist(activeWatchlistId, symbolToAdd);
-        } catch (err) {
-          console.error("Failed to add stock to db watchlist:", err);
-        }
-      }
-    } else {
-      const updated = [...localWatchlistSymbols, symbolToAdd];
-      setLocalWatchlistSymbols(updated);
-      localStorage.setItem("watchlist", JSON.stringify(updated));
-    }
+    const updated = [...localWatchlistSymbols, symbolToAdd];
+    setLocalWatchlistSymbols(updated);
+    localStorage.setItem("watchlist", JSON.stringify(updated));
+
     setWatchlistQuery("");
     setShowSuggestions(false);
   };
@@ -388,24 +352,11 @@ export function GlobalDirectionPanel() {
   const handleRemoveFromWatchlist = async (symbol: string) => {
     const cleanSym = symbol.toUpperCase().replace(/\.(NS|BO)$/, "");
     
-    if (isAuthenticated) {
-      if (activeWatchlistId) {
-        try {
-          const actualSymbol = watchlistSymbols.find(s => s.toUpperCase().replace(/\.(NS|BO)$/, "") === cleanSym);
-          if (actualSymbol) {
-            await removeFromWatchlist(activeWatchlistId, actualSymbol);
-          }
-        } catch (err) {
-          console.error("Failed to remove stock from db watchlist:", err);
-        }
-      }
-    } else {
-      const updated = localWatchlistSymbols.filter(
-        (s) => s.toUpperCase().replace(/\.(NS|BO)$/, "") !== cleanSym
-      );
-      setLocalWatchlistSymbols(updated);
-      localStorage.setItem("watchlist", JSON.stringify(updated));
-    }
+    const updated = localWatchlistSymbols.filter(
+      (s) => s.toUpperCase().replace(/\.(NS|BO)$/, "") !== cleanSym
+    );
+    setLocalWatchlistSymbols(updated);
+    localStorage.setItem("watchlist", JSON.stringify(updated));
   };
 
   return (
@@ -627,63 +578,6 @@ export function GlobalDirectionPanel() {
 
         {activeTab === "watchlist" && (
           <div className="space-y-3">
-            {/* Database Watchlist Selector & Creation Panel */}
-            {isAuthenticated && (
-              <div className="space-y-2.5 mb-2 pb-2.5 border-b border-white/5">
-                <div className="flex items-center justify-between gap-2">
-                  <select
-                    value={activeWatchlistId || ""}
-                    onChange={(e) => setActiveWatchlistId(Number(e.target.value))}
-                    className="flex-1 rounded-lg border border-white/10 bg-[#0c1220] px-2 py-1 text-xs text-slate-300 focus:border-indigo-500/50 outline-none cursor-pointer"
-                  >
-                    {watchlists.map((wl) => (
-                      <option key={wl.id} value={wl.id}>
-                        {wl.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateWl(!showCreateWl)}
-                    className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold text-indigo-400 hover:bg-white/10 transition cursor-pointer shrink-0"
-                  >
-                    {showCreateWl ? "Close" : "New Wl"}
-                  </button>
-                </div>
-
-                {showCreateWl && (
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      if (!newWatchlistName.trim()) return;
-                      try {
-                        await createWatchlist(newWatchlistName.trim());
-                        setNewWatchlistName("");
-                        setShowCreateWl(false);
-                      } catch (err) {
-                        console.error(err);
-                      }
-                    }}
-                    className="flex gap-2 animate-fade-in"
-                  >
-                    <input
-                      type="text"
-                      placeholder="Watchlist name (e.g. Breakouts)..."
-                      value={newWatchlistName}
-                      onChange={(e) => setNewWatchlistName(e.target.value)}
-                      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#080d19] px-2 py-1 text-xs text-white placeholder:text-slate-600 outline-none"
-                    />
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-indigo-500/20 px-2.5 py-1 text-[10px] font-bold text-indigo-400 hover:bg-indigo-500/30 transition cursor-pointer shrink-0"
-                    >
-                      Create
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
 
             {/* Add symbol form */}
             <div className="relative">

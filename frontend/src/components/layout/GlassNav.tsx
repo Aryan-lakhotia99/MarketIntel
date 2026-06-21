@@ -17,7 +17,6 @@ import { SymbolSearchDialog } from "@/components/layout/SymbolSearchDialog";
 import { fetchLiveNews } from "@/lib/api";
 import { NAV_ITEMS } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/context/AuthContext";
 
 const iconMap = {
   Dashboard: LayoutDashboard,
@@ -29,11 +28,9 @@ const iconMap = {
 } as const;
 
 export function GlassNav() {
-  const { user, logout } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("#dashboard");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [alerts, setAlerts] = useState<any[]>([]);
 
   const openSearch = useCallback(() => setSearchOpen(true), []);
@@ -231,35 +228,6 @@ export function GlassNav() {
                     })
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-
-
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setProfileOpen(!profileOpen)}
-              className="hidden h-9 w-9 items-center justify-center rounded-full border border-indigo-500/30 bg-indigo-500/10 text-xs font-semibold text-indigo-300 cursor-pointer sm:flex hover:bg-indigo-500/20 transition-colors"
-            >
-              {user?.email ? user.email.slice(0, 1).toUpperCase() : "U"}
-            </button>
-            {profileOpen && (
-              <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-white/10 bg-[#0c0f16]/95 p-2.5 shadow-2xl backdrop-blur-md animate-fade-in">
-                <div className="px-2 py-1.5 border-b border-white/5 mb-1.5">
-                  <p className="text-[9px] text-slate-500 uppercase tracking-wider">Signed In As</p>
-                  <p className="text-xs font-medium text-indigo-300 truncate">{user?.email}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setProfileOpen(false);
-                    logout();
-                  }}
-                  className="w-full text-left rounded-lg px-2 py-1.5 text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                >
-                  Sign Out
-                </button>
               </div>
             )}
           </div>

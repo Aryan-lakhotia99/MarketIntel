@@ -9,8 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@insforge/sdk": "^1.4.0",
-    "jose": "^6.2.3",
     "lightweight-charts": "^5.2.0",
     "lucide-react": "^1.17.0",
     "next": "16.2.9",
