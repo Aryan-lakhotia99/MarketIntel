@@ -228,6 +228,7 @@ export type StockDirectoryEntry = {
   imiScore: number;
   foCondition: string;
   pcr: number | null;
+  currency?: string;
 };
 
 export type DerivativesSnapshot = {
@@ -269,6 +270,7 @@ export type BreakoutEvent = {
   volume: number | null;
   multiplierStatus: string;
   type: "52w_high" | "52w_low" | "volume_breakout";
+  currency?: string;
 };
 
 export async function fetchBreakoutEvents(): Promise<BreakoutEvent[]> {

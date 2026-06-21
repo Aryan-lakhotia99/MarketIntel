@@ -93,7 +93,8 @@ def populate_initial_events():
                 changePercent=round(chg, 2),
                 volume=vol,
                 multiplierStatus=t["multiplierStatus"],
-                type=t["type"]
+                type=t["type"],
+                currency="USD" if sym in US_TICKERS else "INR",
             )
         )
 
@@ -177,7 +178,8 @@ async def scan_market_task():
                                 changePercent=round(chg_pct, 2),
                                 volume=vol,
                                 multiplierStatus="52W High Breakout",
-                                type="52w_high"
+                                type="52w_high",
+                                currency=q.currency if q else ("USD" if sym in US_TICKERS else "INR"),
                             )
                         )
                         new_event_added = True
@@ -198,7 +200,8 @@ async def scan_market_task():
                                 changePercent=round(chg_pct, 2),
                                 volume=vol,
                                 multiplierStatus="52W Low Breakdown",
-                                type="52w_low"
+                                type="52w_low",
+                                currency=q.currency if q else ("USD" if sym in US_TICKERS else "INR"),
                             )
                         )
                         new_event_added = True
@@ -223,7 +226,8 @@ async def scan_market_task():
                                     changePercent=round(chg_pct, 2),
                                     volume=vol,
                                     multiplierStatus=f"{ratio:.1f}x Vol Spike",
-                                    type="volume_breakout"
+                                    type="volume_breakout",
+                                    currency=q.currency if q else ("USD" if sym in US_TICKERS else "INR"),
                                 )
                             )
                             new_event_added = True
@@ -262,7 +266,8 @@ async def scan_market_task():
                             changePercent=round(sim_chg, 2),
                             volume=sim_vol,
                             multiplierStatus=status,
-                            type=sim_type
+                            type=sim_type,
+                            currency=sim_quote.currency if sim_quote else ("USD" if sim_sym in US_TICKERS else "INR"),
                         )
                     )
                     print(f"[Breakout Simulator] Injected simulated event for {sim_sym} ({sim_type})")
@@ -559,6 +564,7 @@ def get_stock_directory(sector: str | None = Query(None)):
                 imiScore=imi,
                 foCondition=fo_cond,
                 pcr=pcr,
+                currency=q.currency if q else ("USD" if sym in US_TICKERS else "INR"),
             )
         )
 

@@ -206,6 +206,7 @@ class StockDirectoryEntry(BaseModel):
     imi_score: int = Field(..., alias="imiScore")
     fo_condition: str = Field(..., alias="foCondition")
     pcr: float | None = None
+    currency: str | None = None
 
     model_config = {"populate_by_name": True}
 
@@ -218,5 +219,6 @@ class BreakoutEvent(BaseModel):
     volume: int | None = None
     multiplier_status: str = Field(..., alias="multiplierStatus")
     type: str  # "52w_high" | "52w_low" | "volume_breakout"
+    currency: str | None = None
 
     model_config = {"populate_by_name": True}

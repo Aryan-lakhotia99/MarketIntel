@@ -206,7 +206,8 @@ export default function StockDirectory({
 
                       {/* Price */}
                       <td className="p-3.5 text-right font-bold text-white">
-                        ₹{stock.price ? stock.price.toLocaleString("en-IN", { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : "—"}
+                        {stock.currency === "USD" ? "$" : "₹"}
+                        {stock.price ? stock.price.toLocaleString(stock.currency === "USD" ? "en-US" : "en-IN", { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : "—"}
                       </td>
 
                       {/* Change % */}

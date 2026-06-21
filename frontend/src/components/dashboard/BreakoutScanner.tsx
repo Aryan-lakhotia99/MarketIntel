@@ -92,17 +92,19 @@ export default function BreakoutScanner() {
     return usSymbols.includes(symbol.toUpperCase());
   };
 
-  const formatPrice = (price: number | null, symbol: string) => {
+  const formatPrice = (price: number | null, symbol: string, currency?: string) => {
     if (price === null || price === undefined) return "—";
-    const prefix = isUSStock(symbol) ? "$" : "₹";
-    const locale = isUSStock(symbol) ? "en-US" : "en-IN";
+    const isUSD = currency === "USD" || isUSStock(symbol);
+    const prefix = isUSD ? "$" : "₹";
+    const locale = isUSD ? "en-US" : "en-IN";
     return `${prefix}${price.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatVolume = (vol: number | null, symbol: string) => {
+  const formatVolume = (vol: number | null, symbol: string, currency?: string) => {
     if (vol === null || vol === undefined) return "—";
-    const locale = isUSStock(symbol) ? "en-US" : "en-IN";
-    if (isUSStock(symbol)) {
+    const isUSD = currency === "USD" || isUSStock(symbol);
+    const locale = isUSD ? "en-US" : "en-IN";
+    if (isUSD) {
       if (vol >= 1000000) return `${(vol / 1000000).toFixed(1)}M`;
       if (vol >= 1000) return `${(vol / 1000).toFixed(1)}K`;
       return vol.toLocaleString(locale);
@@ -250,14 +252,14 @@ export default function BreakoutScanner() {
                         <div className="flex items-center gap-2">
                           <StockLink symbol={event.symbol} />
                           <span className="rounded bg-white/5 px-1.5 py-0.5 text-[8px] font-bold text-slate-400 uppercase tracking-wide">
-                            {isUSStock(event.symbol) ? "US" : "NSE"}
+                            {event.currency === "USD" || isUSStock(event.symbol) ? "US" : "NSE"}
                           </span>
                         </div>
                       </td>
 
                       {/* LTP */}
                       <td className="p-3.5 text-right font-bold text-white">
-                        {formatPrice(event.ltp, event.symbol)}
+                        {formatPrice(event.ltp, event.symbol, event.currency)}
                       </td>
 
                       {/* % Change */}
@@ -270,7 +272,7 @@ export default function BreakoutScanner() {
 
                       {/* Daily Volume */}
                       <td className="p-3.5 text-right text-slate-300 font-semibold">
-                        {formatVolume(event.volume, event.symbol)}
+                        {formatVolume(event.volume, event.symbol, event.currency)}
                       </td>
 
                       {/* Status / Multiplier Badge */}
