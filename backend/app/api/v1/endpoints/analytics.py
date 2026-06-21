@@ -273,9 +273,18 @@ async def scan_market_task():
                     print(f"[Breakout Simulator] Injected simulated event for {sim_sym} ({sim_type})")
                     
         except Exception as e:
+            err_msg = str(e).lower()
+            if "rate limit" in err_msg or "429" in err_msg or "too many requests" in err_msg:
+                print(f"Rate limit hit in breakout scanner loop. Backing off for 5 minutes.")
+                await asyncio.sleep(300)
+                continue
             print(f"Error in breakout scanner loop: {e}")
             
-        await asyncio.sleep(60)
+        # Dynamic sleep based on market state
+        if is_market_open():
+            await asyncio.sleep(180) # 3 minutes sleep when market is open
+        else:
+            await asyncio.sleep(900) # 15 minutes sleep when market is closed
 
 STOCK_SECTORS = {
     "HDFCBANK": "Nifty Bank",

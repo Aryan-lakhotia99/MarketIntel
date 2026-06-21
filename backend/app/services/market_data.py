@@ -544,6 +544,10 @@ def fetch_stock_quotes(symbols: list[str]) -> list[StockQuote]:
         # Batch download 1-year daily history to extract current metrics + 52-week high/low
         df = yf.download(normalized_symbols, period="1y", interval="1d", group_by="ticker", progress=False, session=YF_SESSION)
     except Exception as e:
+        err_msg = str(e).lower()
+        if "rate limit" in err_msg or "429" in err_msg or "too many requests" in err_msg:
+            print(f"[fetch_stock_quotes] Rate limited by Yahoo Finance. Skipping individual fetching to avoid blocking the IP.")
+            return []
         print(f"[fetch_stock_quotes] Batch download failed: {e}. Falling back to individual fetching.")
         df = pd.DataFrame()
 
