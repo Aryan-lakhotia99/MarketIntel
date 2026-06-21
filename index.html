@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketIntel — Real-Time Breakout Scanners & Market Intelligence</title>
+    <meta name="description" content="An advanced real-time trading dashboard featuring 52-week breakout scanners, money rotation heatmaps, derivatives snapshots, and SMC algorithmic charts.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #06080c;
+            --card-bg: rgba(13, 17, 24, 0.7);
+            --card-border: rgba(255, 255, 255, 0.05);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-indigo: #6366f1;
+            --accent-emerald: #10b981;
+            --accent-rose: #f43f5e;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Background glow blobs */
+        .glow-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: -1;
+            opacity: 0.35;
+        }
+
+        .blob-1 {
+            top: -10%;
+            left: 20%;
+            width: 400px;
+            height: 400px;
+            background: var(--accent-indigo);
+        }
+
+        .blob-2 {
+            top: 40%;
+            right: 10%;
+            width: 500px;
+            height: 500px;
+            background: rgba(16, 185, 129, 0.4);
+        }
+
+        .blob-3 {
+            bottom: -5%;
+            left: 15%;
+            width: 450px;
+            height: 450px;
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        header {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 30%, var(--accent-indigo));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-emerald);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-emerald);
+            animation: pulse 2s infinite;
+        }
+
+        .github-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px border var(--card-border);
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .github-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .hero {
+            max-width: 1000px;
+            margin: 4rem auto 6rem;
+            text-align: center;
+            padding: 0 2rem;
+            position: relative;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.4rem 1rem;
+            border-radius: 100px;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-pulse {
+            width: 6px;
+            height: 6px;
+            background-color: #818cf8;
+            border-radius: 50%;
+            animation: pulse-glow 1.5s infinite;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            line-height: 1.15;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, #ffffff, #cbd5e1, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto 2.5rem;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.8rem 2rem;
+            border-radius: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--accent-indigo);
+            color: white;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5);
+            background: #4f46e5;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Glass Cards Section */
+        .features {
+            max-width: 1200px;
+            margin: 0 auto 8rem;
+            padding: 0 2rem;
+        }
+
+        .features-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .features-header h2 {
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .features-header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            backdrop-filter: blur(12px);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(99, 102, 241, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.05);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .icon-indigo {
+            background: rgba(99, 102, 241, 0.1);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .icon-emerald {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .icon-rose {
+            background: rgba(244, 63, 94, 0.1);
+            color: #fb7185;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+        }
+
+        .card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .card p {
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        /* Architecture Section */
+        .architecture {
+            max-width: 1000px;
+            margin: 0 auto 8rem;
+            padding: 0 2rem;
+            text-align: center;
+        }
+
+        .architecture h2 {
+            font-size: 2.2rem;
+            margin-bottom: 3rem;
+        }
+
+        .arch-container {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 3rem;
+            backdrop-filter: blur(12px);
+        }
+
+        /* Setup / Console Section */
+        .setup {
+            max-width: 900px;
+            margin: 0 auto 8rem;
+            padding: 0 2rem;
+        }
+
+        .setup h2 {
+            font-size: 2.2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .terminal {
+            background: #090d16;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            font-family: 'Fira Code', monospace;
+            padding: 2rem;
+            position: relative;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .terminal-header {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 1.5rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background-color: #ef4444; }
+        .dot-yellow { background-color: #f59e0b; }
+        .dot-green { background-color: #10b981; }
+
+        .terminal-content {
+            font-size: 0.85rem;
+            color: #e2e8f0;
+        }
+
+        .comment {
+            color: #64748b;
+        }
+
+        .cmd {
+            color: #38bdf8;
+            margin-bottom: 1.2rem;
+        }
+
+        .cmd::before {
+            content: "$ ";
+            color: #64748b;
+        }
+
+        .output {
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.05);
+        }
+
+        footer {
+            border-top: 1px solid var(--card-border);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        footer a:hover {
+            color: var(--accent-indigo);
+        }
+
+        /* SVG Flowchart styling */
+        .arch-svg {
+            width: 100%;
+            max-width: 720px;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        .node-rect {
+            fill: #0d131f;
+            stroke: rgba(99, 102, 241, 0.3);
+            stroke-width: 1.5;
+            rx: 12px;
+        }
+
+        .node-rect-active {
+            fill: rgba(99, 102, 241, 0.08);
+            stroke: var(--accent-indigo);
+            stroke-width: 2;
+            rx: 12px;
+            filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.2));
+        }
+
+        .node-text {
+            fill: var(--text-primary);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .node-subtext {
+            fill: var(--text-secondary);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 10px;
+        }
+
+        .edge-line {
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1.5;
+            fill: none;
+            stroke-dasharray: 4 4;
+        }
+
+        .edge-arrow {
+            fill: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(0.9);
+            }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(129, 140, 248, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(129, 140, 248, 0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.8rem;
+            }
+            .hero p {
+                font-size: 1rem;
+            }
+            .btn {
+                padding: 0.7rem 1.5rem;
+                font-size: 0.85rem;
+            }
+            .arch-container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-blob blob-1"></div>
+    <div class="glow-blob blob-2"></div>
+    <div class="glow-blob blob-3"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-dot"></div>
+            MarketIntel
+        </div>
+        <a href="https://github.com/Aryan-lakhotia99/Firstproject" class="github-btn" target="_blank" rel="noopener noreferrer">
+            <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+            </svg>
+            GitHub Repository
+        </a>
+    </header>
+
+    <section class="hero">
+        <div class="badge">
+            <div class="badge-pulse"></div>
+            MarketIntel Real-Time
+        </div>
+        <h1>Market Intelligence &<br>Algorithmic Scanners</h1>
+        <p>A high-performance algorithmic monitoring platform tracking 52-week breakouts, institutional volume rotation, PCR ratios, and SMC indicators for Indian and US markets.</p>
+        
+        <div class="cta-group">
+            <a href="https://github.com/Aryan-lakhotia99/Firstproject" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Launch Repository</a>
+            <a href="#architecture" class="btn btn-secondary">View Architecture</a>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="features-header">
+            <h2>Algorithmic Indicators & Features</h2>
+            <p>Monitored dynamically with real-time analytics engines.</p>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <div class="card-icon icon-indigo">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                </div>
+                <h3>Live Breakout Scanners</h3>
+                <p>Monitors 52-week high breakouts, 52-week low breakdowns, and volume momentum spikes (2.5x volume average spikes) dynamically with millisecond updates.</p>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon icon-emerald">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3v18h18"></path>
+                        <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path>
+                    </svg>
+                </div>
+                <h3>Sector Money Heatmap</h3>
+                <p>Visualizes institutional money rotation across index groups (Nifty IT, Nifty Bank, Nifty Auto, Nifty Metal, US Tech) based on volume weight shifts and price momentum grids.</p>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon icon-rose">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                </div>
+                <h3>Derivatives & Buildup</h3>
+                <p>Tracks F&O market sentiment indicators including simulated Put-Call Ratio (PCR) speedometers and derivatives snapshots (Long Buildup, Short Covering, Short Buildup, Long Unwinding).</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="architecture" id="architecture">
+        <h2>System Architecture</h2>
+        
+        <div class="arch-container">
+            <svg class="arch-svg" viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg">
+                <!-- Connectors / Lines -->
+                <line x1="140" y1="60" x2="300" y2="60" class="edge-line" />
+                <path d="M 300 60 L 290 55 L 290 65 Z" class="edge-arrow" />
+                
+                <line x1="140" y1="180" x2="300" y2="180" class="edge-line" />
+                <path d="M 300 180 L 290 175 L 290 185 Z" class="edge-arrow" />
+                
+                <line x1="420" y1="60" x2="480" y2="120" class="edge-line" />
+                <line x1="420" y1="180" x2="480" y2="120" class="edge-line" />
+                
+                <!-- Client Side Nodes -->
+                <g>
+                    <rect x="20" y="20" width="120" height="80" class="node-rect-active" />
+                    <text x="35" y="55" class="node-text">Next.js UI</text>
+                    <text x="35" y="75" class="node-subtext">React Frontend</text>
+                </g>
+                <g>
+                    <rect x="20" y="140" width="120" height="80" class="node-rect" />
+                    <text x="35" y="175" class="node-text">Google OAuth</text>
+                    <text x="35" y="195" class="node-subtext">InsForge BaaS</text>
+                </g>
+                
+                <!-- Backend Server Nodes -->
+                <g>
+                    <rect x="300" y="20" width="120" height="80" class="node-rect-active" />
+                    <text x="315" y="55" class="node-text">FastAPI API</text>
+                    <text x="315" y="75" class="node-subtext">Python backend</text>
+                </g>
+                <g>
+                    <rect x="300" y="140" width="120" height="80" class="node-rect" />
+                    <text x="315" y="175" class="node-text">Scanner Loop</text>
+                    <text x="315" y="195" class="node-subtext">yf.download</text>
+                </g>
+                
+                <!-- Third-Party & DB Nodes -->
+                <g>
+                    <rect x="460" y="80" width="120" height="80" class="node-rect" />
+                    <text x="475" y="115" class="node-text">Yahoo Finance</text>
+                    <text x="475" y="135" class="node-subtext">Stock & Index data</text>
+                </g>
+            </svg>
+        </div>
+    </section>
+
+    <section class="setup">
+        <h2>Local Development & Deployment</h2>
+        
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="dot dot-red"></div>
+                <div class="dot dot-yellow"></div>
+                <div class="dot dot-green"></div>
+            </div>
+            <div class="terminal-content">
+                <div class="comment"># Clone the repository</div>
+                <div class="cmd">git clone https://github.com/Aryan-lakhotia99/Firstproject.git</div>
+                <div class="cmd">cd Firstproject</div>
+                
+                <div class="comment"># Run the complete stack locally (Starts frontend on 3000 & backend on 8000)</div>
+                <div class="cmd">python run_app.py</div>
+                <div class="output">
+                    [Start] Starting MarketIntel Application...<br>
+                    [Backend] Starting FastAPI Backend on http://127.0.0.1:8000...<br>
+                    [Frontend] Starting Next.js Frontend on http://localhost:3000...<br>
+                    [Info] Both servers running. Press Ctrl+C to terminate.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 MarketIntel. Codebase available on <a href="https://github.com/Aryan-lakhotia99/Firstproject" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+    </footer>
+
+</body>
+</html>
