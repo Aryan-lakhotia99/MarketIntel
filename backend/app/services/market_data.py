@@ -306,7 +306,9 @@ def _fetch_ticker_info(symbol: str) -> dict[str, Any]:
     if symbol in _TICKER_CACHE:
         timestamp, cached_info = _TICKER_CACHE[symbol]
         if now - timestamp < CACHE_TTL:
-            return cached_info
+            # Only return from cache if it contains complete detailed information
+            if not cached_info.get("is_partial"):
+                return cached_info
 
     ticker = yf.Ticker(symbol, session=YF_SESSION)
     info = {}
@@ -339,6 +341,7 @@ def _fetch_ticker_info(symbol: str) -> dict[str, Any]:
                 "regularMarketDayLow": float(latest["Low"]),
                 "regularMarketVolume": int(latest["Volume"]) if latest["Volume"] == latest["Volume"] else None,
                 "currency": "INR" if symbol.endswith(".NS") or symbol.startswith("^NSE") or symbol.startswith("^BSE") else "USD",
+                "is_partial": True,
             }
 
     # --- Last-known-good price persistence ---
@@ -346,9 +349,11 @@ def _fetch_ticker_info(symbol: str) -> dict[str, Any]:
     current_price = _safe_float(info.get("regularMarketPrice") or info.get("currentPrice"))
 
     if current_price and current_price > 0:
-        # Valid live price — update last-known-good cache and persist
-        _LAST_GOOD_CACHE[symbol] = dict(info)
-        _save_last_good_cache()
+        # Only overwrite last_good_cache if this is a complete detailed load or if there is no detailed cache yet
+        is_partial = info.get("is_partial", False)
+        if not is_partial or symbol not in _LAST_GOOD_CACHE or _LAST_GOOD_CACHE[symbol].get("is_partial"):
+            _LAST_GOOD_CACHE[symbol] = dict(info)
+            _save_last_good_cache()
     else:
         # Price is zero/null (market closed or yfinance gap) — try fetching last bar from history
         if not current_price or current_price == 0:
@@ -368,10 +373,12 @@ def _fetch_ticker_info(symbol: str) -> dict[str, Any]:
                         "regularMarketOpen": float(latest["Open"]),
                         "regularMarketDayHigh": float(latest["High"]),
                         "regularMarketDayLow": float(latest["Low"]),
+                        "is_partial": True,
                     })
-                    # Save this as last good
-                    _LAST_GOOD_CACHE[symbol] = dict(info)
-                    _save_last_good_cache()
+                    # Save this as last good if not already have complete cache
+                    if symbol not in _LAST_GOOD_CACHE or _LAST_GOOD_CACHE[symbol].get("is_partial"):
+                        _LAST_GOOD_CACHE[symbol] = dict(info)
+                        _save_last_good_cache()
             except Exception:
                 pass
 
@@ -596,11 +603,17 @@ def fetch_stock_quotes(symbols: list[str]) -> list[StockQuote]:
                         "currency": "USD" if original_sym.upper() in US_TICKERS else "INR",
                         "shortName": original_sym.upper(),
                         "regularMarketTime": latest.name.timestamp() if hasattr(latest.name, "timestamp") else None,
+                        "is_partial": True,
                     }
                     
-                    # Update cache so that concurrent singular lookups benefit
-                    _TICKER_CACHE[norm_sym] = (time.time(), info)
-                    _LAST_GOOD_CACHE[norm_sym] = info
+                    # Only update ticker cache with partial if no complete cache exists
+                    existing = _TICKER_CACHE.get(norm_sym)
+                    if not existing or existing[1].get("is_partial"):
+                        _TICKER_CACHE[norm_sym] = (time.time(), info)
+                        
+                    # Only update last good prices cache if no complete cache exists
+                    if norm_sym not in _LAST_GOOD_CACHE or _LAST_GOOD_CACHE[norm_sym].get("is_partial"):
+                        _LAST_GOOD_CACHE[norm_sym] = info
                     
                     # Build StockQuote
                     quote = _build_stock_quote(original_sym, info)
