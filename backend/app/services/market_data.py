@@ -15,13 +15,8 @@ import pandas as pd
 import requests
 import yfinance as yf
 
-# Configure custom requests session with a standard browser User-Agent to bypass cloud hosting blocks
-YF_SESSION = requests.Session()
-YF_SESSION.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-})
+# Configure custom requests session (None to let yfinance use curl_cffi internally to bypass cloud hosting blocks)
+YF_SESSION = None
 
 from app.schemas.market import (
     IndexQuote,

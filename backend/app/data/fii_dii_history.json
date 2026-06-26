@@ -1,12 +1,12 @@
 {
   "previous": {
-    "date": "2026-06-16",
-    "fii_net": -749.18,
-    "dii_net": 0.06
-  },
-  "latest": {
     "date": "2026-06-19",
     "fii_net": 4859.07,
     "dii_net": -1159.64
+  },
+  "latest": {
+    "date": "2026-06-25",
+    "fii_net": 383.76,
+    "dii_net": 5747.75
   }
 }
