@@ -246,11 +246,13 @@ async def scan_market_task():
                     
                     if sim_type == "52w_high":
                         status = "52W High Breakout"
-                        sim_ltp = sim_ltp * 1.012 # 1.2% above today's price
+                        ref_high = sim_quote.fifty_two_week_high
+                        sim_ltp = ref_high * 1.002 if ref_high else sim_ltp * 1.012
                         sim_chg = max(sim_chg, 1.8)
                     elif sim_type == "52w_low":
                         status = "52W Low Breakdown"
-                        sim_ltp = sim_ltp * 0.988 # 1.2% below today's price
+                        ref_low = sim_quote.fifty_two_week_low
+                        sim_ltp = ref_low * 0.998 if ref_low else sim_ltp * 0.988
                         sim_chg = min(sim_chg, -1.8)
                     else:
                         ratio = random.uniform(2.6, 4.8)
