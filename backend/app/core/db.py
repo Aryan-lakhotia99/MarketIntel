@@ -135,33 +135,19 @@ def init_db() -> None:
     try:
         cursor = conn.cursor()
         
-        # Schema migration check: only applicable for local SQLite
-        if not IS_POSTGRES:
-            cursor.execute("PRAGMA table_info(users)")
-            columns = [col[1] for col in cursor.fetchall()]
-            
-            # If the table exists but lacks our new columns, drop all tables to execute a clean migration
-            if columns and ("auth_provider" not in columns or "google_id" not in columns):
-                print("[DB MIGRATION] Outdated schema detected. Dropping old tables...")
-                cursor.execute("DROP TABLE IF EXISTS user_resets")
-                cursor.execute("DROP TABLE IF EXISTS users")
-                cursor.execute("DROP TABLE IF EXISTS watchlists")
-                cursor.execute("DROP TABLE IF EXISTS watchlist_items")
-            
         # Create users table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT UNIQUE NOT NULL,
-                google_id TEXT UNIQUE, -- Stores real Google sub ID
-                hashed_password TEXT, -- Nullable for OAuth users
+                hashed_password TEXT,
                 name TEXT,
                 profile_pic TEXT,
-                auth_provider TEXT DEFAULT 'local',
                 premium_tier_status TEXT DEFAULT 'free',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
         
         # Create user_resets table for password recovery
         cursor.execute("""
