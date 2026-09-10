@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: marketintel-backend
+    env: python
+    plan: free
+    buildCommand: "pip install --no-cache-dir -r backend/requirements.txt"
+    startCommand: "cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    rootDir: backend
+    envVars:
+      - key: DATABASE_URL
+        scope: build
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+  - type: web
+    name: marketintel-frontend
+    env: node
+    plan: free
+    buildCommand: "cd frontend && npm install && npm run build"
+    startCommand: "cd frontend && npm run start"
+    rootDir: frontend
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: ""
+      - key: NEXT_PUBLIC_APP_URL
+        value: ""
