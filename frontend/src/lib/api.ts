@@ -9,7 +9,18 @@ import {
   DELIVERY_BREAKOUTS,
 } from "@/lib/mock-data";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1";
+// Get API base URL from environment variable
+// Must be explicitly set during build time or at runtime
+const API_BASE = (() => {
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  if (!url) {
+    console.warn("NEXT_PUBLIC_API_URL not set, using default localhost");
+    return "http://127.0.0.1:8000/api/v1";
+  }
+  return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
+})();
+
+console.log("API Base URL:", API_BASE);
 
 // Helper to map yfinance IndexQuote to IndexTicker format
 function mapIndexQuote(q: any, region: "india" | "global"): any {
