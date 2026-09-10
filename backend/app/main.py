@@ -1,4 +1,5 @@
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,17 +32,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Configure CORS - Allow all origins for development/deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_origin_regex="https://.*\\.vercel\\.app",
+    allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
-
 
 
 @app.get("/")
