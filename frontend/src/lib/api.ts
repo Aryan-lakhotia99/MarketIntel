@@ -9,18 +9,10 @@ import {
   DELIVERY_BREAKOUTS,
 } from "@/lib/mock-data";
 
-// Get API base URL from environment variable
-// Must be explicitly set during build time or at runtime
-const API_BASE = (() => {
-  const url = process.env.NEXT_PUBLIC_API_URL;
-  if (!url) {
-    console.warn("NEXT_PUBLIC_API_URL not set, using default localhost");
-    return "http://127.0.0.1:8000/api/v1";
-  }
-  return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
-})();
+// ✅ FIXED: Use API_BASE exactly as provided in environment variable
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
 
-console.log("API Base URL:", API_BASE);
+console.log("✅ API Base URL:", API_BASE);
 
 // Helper to map yfinance IndexQuote to IndexTicker format
 function mapIndexQuote(q: any, region: "india" | "global"): any {
@@ -62,7 +54,6 @@ export async function fetchMarketSnapshot(): Promise<LiveMarketSnapshot> {
       currencies: (data.currencies ?? []).map((q: any) => mapIndexQuote(q, "global")),
     };
   } catch {
-    // Mock commodities fallback
     const mockCommodities: IndexTicker[] = [
       { key: "gold", name: "Gold", price: 2320.4, changePercent: 0.45, region: "global", currency: "USD" },
       { key: "silver", name: "Silver", price: 29.8, changePercent: -0.2, region: "global", currency: "USD" },
@@ -70,7 +61,6 @@ export async function fetchMarketSnapshot(): Promise<LiveMarketSnapshot> {
       { key: "natural_gas", name: "Natural Gas", price: 2.92, changePercent: -2.3, region: "global", currency: "USD" },
       { key: "copper", name: "Copper", price: 4.52, changePercent: 0.12, region: "global", currency: "USD" },
     ];
-    // Mock currencies fallback
     const mockCurrencies: IndexTicker[] = [
       { key: "usdinr", name: "USD / INR", price: 83.5, changePercent: 0.05, region: "global", currency: "INR" },
       { key: "usdeur", name: "USD / EUR", price: 0.92, changePercent: -0.12, region: "global", currency: "EUR" },
