@@ -32,7 +32,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS - Allow all origins for development/deployment
+# ✅ CRITICAL: Add CORS middleware FIRST, allow all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins
@@ -41,6 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Then add routes
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 
 
